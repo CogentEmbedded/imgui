@@ -448,9 +448,16 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                 if (clip_max.x < clip_min.x || clip_max.y < clip_min.y)
                     continue;
 
+#if defined(IMGUI_TDA4_CLIP_ORIGIN_HACK)
+                // TDA4 OpenGLES3 with OpenVX display moves clip origin to upper left, but does it in a way that setting projection matrix
+                // mirrors UI instead of properly rendering it and window coordinates of glScissor need to be set from upper left.
+                // Looks like TI implementation does not follow Khronos spec.
+                // glViewport also affected.
+                glScissor((int)clip_min.x, (int)clip_min.y, (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y));
+#else
                 // Apply scissor/clipping rectangle (Y is inverted in OpenGL)
-                glScissor((int)clip_min.x, (int)(clip_min.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y));
-
+                glScissor((int)clip_min.x, (int)(fb_height - clip_max.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y));
+#endif
                 // Bind texture, Draw
                 glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->GetTexID());
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
