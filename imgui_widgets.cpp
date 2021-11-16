@@ -6205,6 +6205,9 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_SelectOnRelease)   { button_flags |= ImGuiButtonFlags_PressedOnRelease; }
     if (flags & ImGuiSelectableFlags_AllowDoubleClick)  { button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick; }
     if (flags & ImGuiSelectableFlags_AllowItemOverlap)  { button_flags |= ImGuiButtonFlags_AllowItemOverlap; }
+#if defined(IMGUI_TOUCHSCREEN_INPUT_HACK)
+    if (flags & ImGuiSelectableFlags_SelectOnClickReleaseAnywhere) {  button_flags |= ImGuiButtonFlags_PressedOnClickReleaseAnywhere; }
+#endif
 
     const bool was_selected = selected;
     bool hovered, held;
@@ -7021,7 +7024,13 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
     PushID(label);
     if (!enabled)
         BeginDisabled();
+
+#if defined(IMGUI_TOUCHSCREEN_INPUT_HACK)
+    const ImGuiSelectableFlags flags = ImGuiSelectableFlags_SelectOnClickReleaseAnywhere | ImGuiSelectableFlags_SetNavIdOnHover;
+#else
     const ImGuiSelectableFlags flags = ImGuiSelectableFlags_SelectOnRelease | ImGuiSelectableFlags_SetNavIdOnHover;
+#endif
+
     const ImGuiMenuColumns* offsets = &window->DC.MenuColumns;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {

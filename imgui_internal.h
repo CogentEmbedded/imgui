@@ -799,7 +799,11 @@ enum ImGuiButtonFlagsPrivate_
     ImGuiButtonFlags_NoNavFocus             = 1 << 18,  // don't override navigation focus when activated
     ImGuiButtonFlags_NoHoveredOnFocus       = 1 << 19,  // don't report as hovered when nav focus is on this item
     ImGuiButtonFlags_PressedOnMask_         = ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClickReleaseAnywhere | ImGuiButtonFlags_PressedOnRelease | ImGuiButtonFlags_PressedOnDoubleClick | ImGuiButtonFlags_PressedOnDragDropHold,
+#if defined(IMGUI_TOUCHSCREEN_INPUT_HACK)
+    ImGuiButtonFlags_PressedOnDefault_      = ImGuiButtonFlags_PressedOnClickReleaseAnywhere
+#else
     ImGuiButtonFlags_PressedOnDefault_      = ImGuiButtonFlags_PressedOnClickRelease
+#endif
 };
 
 // Extend ImGuiComboFlags_
@@ -827,6 +831,9 @@ enum ImGuiSelectableFlagsPrivate_
     ImGuiSelectableFlags_DrawHoveredWhenHeld    = 1 << 25,  // Always show active when held, even is not hovered. This concept could probably be renamed/formalized somehow.
     ImGuiSelectableFlags_SetNavIdOnHover        = 1 << 26,  // Set Nav/Focus ID on mouse hover (used by MenuItem)
     ImGuiSelectableFlags_NoPadWithHalfSpacing   = 1 << 27   // Disable padding each side with ItemSpacing * 0.5f
+#if defined(IMGUI_TOUCHSCREEN_INPUT_HACK)
+    , ImGuiSelectableFlags_SelectOnClickReleaseAnywhere = 1 << 28 // To support handling on touch screens
+#endif
 };
 
 // Extend ImGuiTreeNodeFlags_
