@@ -353,8 +353,16 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, ImGui_Impl
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 #endif
 
-    // Support for GL 4.5 rarely used glClipControl(GL_UPPER_LEFT)
-#if defined(GL_CLIP_ORIGIN)
+    // Support for GL 4.5 rarely used glClipControl(GL_UPPER_LEFT) or
+#if defined(GL_CLIP_ORIGIN) || defined (IMGUI_CLIP_ORIGIN_HACK)
+#if !defined (GL_CLIP_ORIGIN)
+#define GL_CLIP_ORIGIN 0x935C
+#endif
+
+#if !defined (GL_UPPER_LEFT)
+#define GL_UPPER_LEFT 0x8CA2
+#endif
+
     bool clip_origin_lower_left = true;
     if (bd->HasClipOrigin)
     {
@@ -371,7 +379,7 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, ImGui_Impl
     float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
     float T = draw_data->DisplayPos.y;
     float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
-#if defined(GL_CLIP_ORIGIN)
+#if defined(GL_CLIP_ORIGIN) || defined (IMGUI_CLIP_ORIGIN_HACK)
     if (!clip_origin_lower_left) { float tmp = T; T = B; B = tmp; } // Swap top and bottom if origin is upper left
 #endif
     const float ortho_projection[4][4] =
@@ -585,9 +593,15 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
 
+#if defined(IMGUI_CLIP_ORIGIN_HACK)
+                // On systems that use display subsystem CMA buffer attached to render buffer
+                // and use glClipControl[EXT] with GL_UPPER_LEFT[_EXT] glViewport and glScissor
+                // coordinates have to be flipped over, to address region in matching coordinates system
+                GL_CALL(glScissor((int)clip_min.x, (int)clip_min.y, (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y)));
+#else
                 // Apply scissor/clipping rectangle (Y is inverted in OpenGL)
                 GL_CALL(glScissor((int)clip_min.x, (int)((float)fb_height - clip_max.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y)));
-
+#endif
                 // Bind texture, Draw
                 GL_CALL(glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->GetTexID()));
 
@@ -812,7 +826,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
 
     // Parse GLSL version string
     int glsl_version = 130;
-    sscanf(bd->GlslVersionString, "#version %d", &glsl_version);
+    (void)sscanf(bd->GlslVersionString, "#version %d", &glsl_version);
 
     const GLchar* vertex_shader_glsl_120 =
         "uniform mat4 ProjMtx;\n"
@@ -1051,7 +1065,17 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
     if (major == 0 && minor == 0)
-        sscanf(gl_version_str, "%d.%d", &major, &minor); // Query GL_VERSION in desktop GL 2.x, the string will start with "<major>.<minor>"
+    {
+        if (gl_version_str)
+        {
+            (void)sscanf(gl_version_str, "%d.%d", &major, &minor); // Query GL_VERSION in desktop GL 2.x, the string will start with "<major>.<minor>"
+        }
+        else
+        {
+            major = 3;
+            minor = 2;
+        }
+    }
     bd->GlVersion = (GLuint)(major * 100 + minor * 10);
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &bd->MaxTextureSize);
 
@@ -1138,6 +1162,10 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
         if (extension != nullptr && strcmp(extension, "GL_ARB_clip_control") == 0)
             bd->HasClipOrigin = true;
     }
+#endif
+
+#if defined (IMGUI_CLIP_ORIGIN_HACK)
+    bd->HasClipOrigin = true;
 #endif
 
     return true;

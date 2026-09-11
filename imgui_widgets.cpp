@@ -7483,6 +7483,9 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_SelectOnRelease)   { button_flags |= ImGuiButtonFlags_PressedOnRelease; }
     if (flags & ImGuiSelectableFlags_AllowDoubleClick)  { button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick; }
     if ((flags & ImGuiSelectableFlags_AllowOverlap) || (g.LastItemData.ItemFlags & ImGuiItemFlags_AllowOverlap)) { button_flags |= ImGuiButtonFlags_AllowOverlap; }
+#if defined(IMGUI_TOUCHSCREEN_INPUT_HACK)
+    if (flags & ImGuiSelectableFlags_SelectOnClickReleaseAnywhere) {  button_flags |= ImGuiButtonFlags_PressedOnClickReleaseAnywhere; }
+#endif
 
     // Multi-selection support (header)
     const bool was_selected = selected;
@@ -9666,7 +9669,13 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
     // We use ImGuiSelectableFlags_NoSetKeyOwner to allow down on one menu item, move, up on another.
     const float backup_rounding = style.SelectableRounding;
     style.SelectableRounding = style.MenuItemRounding;
+
+#if defined(IMGUI_TOUCHSCREEN_INPUT_HACK)
+    const ImGuiSelectableFlags selectable_flags = (ImGuiSelectableFlags)ImGuiSelectableFlags_SelectOnClickReleaseAnywhere | (ImGuiSelectableFlags)ImGuiSelectableFlags_SetNavIdOnHover;
+#else
     const ImGuiSelectableFlags selectable_flags = (ImGuiSelectableFlags)ImGuiSelectableFlags_SelectOnRelease | (ImGuiSelectableFlags)ImGuiSelectableFlags_SetNavIdOnHover;
+#endif
+
     ImGuiMenuColumns* offsets = &window->DC.MenuColumns;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
